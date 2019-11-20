@@ -1,0 +1,58 @@
+{
+	"name": "201911-komaba-fes-auto-deployment",
+	"displayName": "201911-komaba-fes-auto-deployment",
+	"description": "",
+	"publisher": "chelproc",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.40.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"*"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "utcode.workshop.komaba-fes2019.deploy",
+				"title": "Webに公開"
+			}
+		],
+		"configuration": {
+			"title": "ut.code();",
+			"properties": {
+				"utcode.googleChromeExcutablePath": {
+					"type": "string",
+					"description": "Google Chrome Excutable Path"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./"
+	},
+	"devDependencies": {
+		"@types/glob": "^7.1.1",
+		"@types/mocha": "^5.2.7",
+		"@types/node": "^12.11.7",
+		"@types/puppeteer-core": "^2.0.0",
+		"@types/rimraf": "^2.0.3",
+		"@types/vscode": "^1.40.0",
+		"cross-zip": "^2.1.6",
+		"glob": "^7.1.5",
+		"mocha": "^6.2.2",
+		"tslint": "^5.20.0",
+		"typescript": "^3.6.4",
+		"vscode-test": "^1.2.2"
+	},
+	"dependencies": {
+		"open": "^7.0.0",
+		"puppeteer-core": "^2.0.0",
+		"rimraf": "^3.0.0"
+	}
+}
