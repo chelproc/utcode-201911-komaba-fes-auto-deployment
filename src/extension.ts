@@ -25,6 +25,11 @@ export function activate(context: vscode.ExtensionContext) {
 	statusBarItem2.text = "テンプレート";
 	statusBarItem2.command = "utcode.workshop.komaba-fes2019.template";
 	statusBarItem2.show();
+
+	const statusBarItem3 = vscode.window.createStatusBarItem();
+	statusBarItem3.text = "実行";
+	statusBarItem3.command = "extension.liveServer.goOnline";
+	statusBarItem3.show();
 }
 
 
