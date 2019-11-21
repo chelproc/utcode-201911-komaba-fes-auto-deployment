@@ -3,14 +3,9 @@ import * as path from "path";
 import * as os from "os";
 import * as puppeteer from "puppeteer-core";
 import * as open from "open";
-import * as rimraf from "rimraf";
-import * as fs from "fs";
-import template from "./template";
-
-const zip = require("cross-zip") as {
-	zip: (inPath: string, outPath: string, callback: (result: Error | null) => void) => void,
-	zipSync: (inPath: string, outPath: string) => void
-};
+import * as fsExtra from "fs-extra";
+import * as zipAFolder from "zip-a-folder";
+import * as extractZip from "extract-zip"
 
 export function activate(context: vscode.ExtensionContext) {
 	const statusBarItem1 = vscode.window.createStatusBarItem();
@@ -25,12 +20,13 @@ export function activate(context: vscode.ExtensionContext) {
 	statusBarItem1.show();
 
 	const statusBarItem2 = vscode.window.createStatusBarItem();
-	const disposable2 = vscode.commands.registerCommand("utcode.workshop.komaba-fes2019.clean", reset);
+	const disposable2 = vscode.commands.registerCommand("utcode.workshop.komaba-fes2019.template", template);
 	context.subscriptions.push(disposable2);
-	statusBarItem2.text = "リセット";
-	statusBarItem2.command = "utcode.workshop.komaba-fes2019.clean";
+	statusBarItem2.text = "テンプレート";
+	statusBarItem2.command = "utcode.workshop.komaba-fes2019.template";
 	statusBarItem2.show();
 }
+
 
 async function deploy() {
 	if (!vscode.workspace.workspaceFolders) {
@@ -43,9 +39,12 @@ async function deploy() {
 		cancellable: false
 	}, async () => {
 		const chromeExcutablePath = vscode.workspace.getConfiguration("utcode").googleChromeExcutablePath;
-
-		const tempPath = path.join(os.tmpdir(), `utcode-komaba-fes${Date.now()}${Math.floor(Math.random() * 10000)}.zip`);
-		zip.zipSync(vscode.workspace.workspaceFolders![0].uri.fsPath, tempPath);
+		const workspaceDir = vscode.workspace.workspaceFolders![0].uri.fsPath;
+		const tempDir = path.join(os.tmpdir(), `utcode-komaba-fes${Date.now()}${Math.floor(Math.random() * 10000)}`);
+		const tempZipPath = tempDir + ".zip";
+		await fsExtra.copy(workspaceDir, tempDir);
+		await Promise.all(["node_modules", ".vscode"].map(item => fsExtra.remove(path.join(tempDir, item))));
+		await zipAFolder.zip(tempDir, tempZipPath);
 
 		const browser = await puppeteer.launch({
 			headless: true,
@@ -73,7 +72,7 @@ async function deploy() {
 		`);
 
 		const fileInput = await page.$("#some-unique-identifier");
-		if (fileInput) await fileInput.uploadFile(tempPath);
+		if (fileInput) await fileInput.uploadFile(tempZipPath);
 
 		const anchorElement = await page.waitForSelector("a.action-link.inline.break-all[rel='noopener noreferrer']", {
 			visible: true
@@ -90,18 +89,22 @@ async function deploy() {
 	});
 }
 
-async function reset() {
+async function template() {
 	if (!vscode.workspace.workspaceFolders) {
 		vscode.window.showInformationMessage("ワークスペースが開かれていません。");
 		return;
 	}
-	if (await vscode.window.showInformationMessage("本当によろしいですか？", "はい", "いいえ") === "はい") {
+	if (await vscode.window.showInformationMessage("この操作を実行すると、編集されたデータがすべて削除されます。本当によろしいですか？", "はい", "いいえ") === "はい") {
 		const workspacePath = vscode.workspace.workspaceFolders![0].uri.fsPath;
-		rimraf(path.join(workspacePath, "*"), () => {
-			for (const [fileName, content] of Object.entries(template)) {
-				fs.writeFileSync(path.join(workspacePath, fileName), content);
-			}
-		});
+		const templatePath = vscode.workspace.getConfiguration("utcode").templatePath;
+		const templates = await fsExtra.readdir(templatePath);
+		const templateName = await vscode.window.showQuickPick(templates.map(template => template.substr(0, template.length - 4) /* trim .zip */));
+
+		const workspaceEntities = await fsExtra.readdir(workspacePath);
+		await Promise.all(workspaceEntities.map(entity => fsExtra.remove(path.join(workspacePath, entity))));
+		extractZip(path.join(templatePath, templateName + ".zip"), {
+			dir: workspacePath
+		}, () => {});
 	}
 }
 
